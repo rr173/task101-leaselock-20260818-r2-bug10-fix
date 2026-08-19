@@ -26,7 +26,7 @@ func (RealClock) Now() time.Time { return time.Now() }
 // FakeClock is a controllable clock whose time only advances when the test
 // calls Advance or Set. It is safe for concurrent use.
 type FakeClock struct {
-	mu  sync.Mutex
+	mu  sync.RWMutex
 	now time.Time
 }
 
@@ -35,8 +35,12 @@ func NewFakeClock(at time.Time) *FakeClock {
 	return &FakeClock{now: at}
 }
 
-// Now returns the clock's current instant.
+// Now returns the clock's current instant. It takes a read lock so that
+// concurrent Advance/Set callers cannot tear the underlying time.Time while
+// it is being observed.
 func (f *FakeClock) Now() time.Time {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	return f.now
 }
 
